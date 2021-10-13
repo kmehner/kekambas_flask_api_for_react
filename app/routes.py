@@ -1,5 +1,5 @@
 from app import app, db
-from flask import render_template
+from flask import render_template, redirect, url_for, flash
 from app.forms import UserInfoForm, PostForm
 from app.models import User, Post
 
@@ -12,7 +12,7 @@ def index():
 
 
 @app.route('/products')
-def test():
+def products():
     title = 'Coding Temple Products'
     products = ['apple', 'orange', 'banana', 'peach']
     return render_template('products.html', title=title, products=products)
@@ -22,16 +22,26 @@ def test():
 def register():
     register_form = UserInfoForm()
     if register_form.validate_on_submit():
-        print('Hello this form has been submitted correctly')
         username = register_form.username.data
         email = register_form.email.data
         password = register_form.password.data
-        print(username, email, password)
+
+        # Check if username already exists
+        existing_user = User.query.filter_by(username=username).all()
+        if existing_user:
+            # Flash a warning message
+            flash(f'The username {username} is already registered. Please try again.', 'danger')
+            # Redirect back to the register page
+            return redirect(url_for('register'))
 
         new_user = User(username, email, password)
 
         db.session.add(new_user)
         db.session.commit()
+
+        flash(f'Thank you {username}, you have succesfully registered!', 'success')
+    
+        return redirect(url_for('index'))
         
     return render_template('register.html', form=register_form)
 
