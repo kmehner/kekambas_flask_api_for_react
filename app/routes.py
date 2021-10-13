@@ -1,6 +1,6 @@
 from app import app, db
 from flask import render_template, redirect, url_for, flash
-from flask_login import login_user, logout_user
+from flask_login import login_user, logout_user, current_user, login_required
 from app.forms import UserInfoForm, PostForm, LoginForm
 from app.models import User, Post
 
@@ -82,13 +82,14 @@ def logout():
 
 
 @app.route('/createpost', methods=['GET', 'POST'])
+@login_required
 def createpost():
     form = PostForm()
     if form.validate_on_submit():
         print('Hello')
         title = form.title.data
         content = form.content.data
-        new_post = Post(title, content, user_id=1)
+        new_post = Post(title, content, current_user.id)
         db.session.add(new_post)
         db.session.commit()
     return render_template('createpost.html', form=form)
