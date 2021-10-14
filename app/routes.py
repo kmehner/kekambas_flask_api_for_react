@@ -107,3 +107,16 @@ def createpost():
         return redirect(url_for('index'))
         
     return render_template('createpost.html', form=form)
+
+
+@app.route('/my-account')
+@login_required
+def my_account():
+    return render_template('my_account.html')
+
+
+@app.route('/my-posts')
+@login_required
+def my_posts():
+    posts = current_user.posts
+    return render_template('my_posts.html', posts=posts)
