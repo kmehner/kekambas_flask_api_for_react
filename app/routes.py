@@ -1,6 +1,7 @@
-from app import app, db
+from app import app, db, mail
 from flask import render_template, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user, login_required
+from flask_mail import Message
 from app.forms import UserInfoForm, PostForm, LoginForm
 from app.models import User, Post
 
@@ -44,6 +45,14 @@ def register():
         db.session.commit()
         # Flash a success message thanking them for signing up
         flash(f'Thank you {username}, you have succesfully registered!', 'success')
+
+        # Create Welcome Email to new user
+        welcome_message = Message('Welcome to the Kekambas Blog!', [email])
+        welcome_message.body = f'Dear {username}, Thank you for signing up for our blog. We are so excited to have you.'
+
+        # Send Welcome Email
+        mail.send(welcome_message)
+
         # Redirecting to the home page
         return redirect(url_for('index'))
         
