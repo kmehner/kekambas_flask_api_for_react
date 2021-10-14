@@ -10,13 +10,16 @@
         <!-- <link rel="stylesheet" href="assets/css/style.css"> -->
         <title>{{ title }}</title>
     </head>
-    <body>
+    <body class='bg-dark text-white'>
 
         <!-- Navbar goes here -->
         {% include 'nav.html' %}
 
         <!-- Main Content -->
         <div class="container">
+            <!-- Message(s) go here -->
+            {% include 'messages.html' %}
+
             {% block content %}
     
             {% endblock %}
