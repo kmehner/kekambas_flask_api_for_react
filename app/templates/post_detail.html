@@ -1,0 +1,26 @@
+{% extends 'base.html' %}
+
+
+{% block content %}
+
+
+<div class="card bg-primary text-dark">
+    <div class="card-header">
+    {{ post.title }}
+    </div>
+    <div class="card-body">
+        <blockquote class="blockquote mb-0">
+            <p>{{ post.content }}</p>
+            <footer class="blockquote-footer text-dark">{{ post.author.username }} on <cite title="Source Title">
+                {{ post.date_created.strftime('%A, %b %d, %Y at %I:%M%p') }}
+            </cite></footer>
+        </blockquote>
+        <a href="#" class="btn btn-success">Update</a>
+        <a href="#" class="btn btn-danger">Delete</a>
+    </div>
+
+</div>
+
+
+
+{% endblock content %}

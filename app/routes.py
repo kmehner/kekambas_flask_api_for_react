@@ -120,3 +120,9 @@ def my_account():
 def my_posts():
     posts = current_user.posts
     return render_template('my_posts.html', posts=posts)
+
+
+@app.route('/posts/<int:post_id>')
+def post_detail(post_id):
+    post = Post.query.get_or_404(post_id)
+    return render_template('post_detail.html', post=post)

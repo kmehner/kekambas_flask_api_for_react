@@ -15,8 +15,7 @@
                     {{ p.date_created.strftime('%A, %b %d, %Y at %I:%M%p') }}
                 </cite></footer>
             </blockquote>
-            <a href="#" class="btn btn-success">Update</a>
-            <a href="#" class="btn btn-danger">Delete</a>
+            <a href="{{ url_for('post_detail', post_id=p.id) }}" class="btn btn-success">More Info</a>
         </div>
 
     </div>
