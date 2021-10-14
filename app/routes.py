@@ -1,6 +1,7 @@
-from app import app, db
+from app import app, db, mail
 from flask import render_template, redirect, url_for, flash
 from flask_login import login_user, logout_user, current_user, login_required
+from flask_mail import Message
 from app.forms import UserInfoForm, PostForm, LoginForm
 from app.models import User, Post
 
@@ -44,6 +45,14 @@ def register():
         db.session.commit()
         # Flash a success message thanking them for signing up
         flash(f'Thank you {username}, you have succesfully registered!', 'success')
+
+        # Create Welcome Email to new user
+        welcome_message = Message('Welcome to the Kekambas Blog!', [email])
+        welcome_message.body = f'Dear {username}, Thank you for signing up for our blog. We are so excited to have you.'
+
+        # Send Welcome Email
+        mail.send(welcome_message)
+
         # Redirecting to the home page
         return redirect(url_for('index'))
         
@@ -98,3 +107,59 @@ def createpost():
         return redirect(url_for('index'))
         
     return render_template('createpost.html', form=form)
+
+
+@app.route('/my-account')
+@login_required
+def my_account():
+    return render_template('my_account.html')
+
+
+@app.route('/my-posts')
+@login_required
+def my_posts():
+    posts = current_user.posts
+    return render_template('my_posts.html', posts=posts)
+
+
+@app.route('/posts/<int:post_id>')
+def post_detail(post_id):
+    post = Post.query.get_or_404(post_id)
+    return render_template('post_detail.html', post=post)
+
+
+@app.route('/posts/<int:post_id>/update', methods=['GET', 'POST'])
+@login_required
+def post_update(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.author.id != current_user.id:
+        flash('That is not your post. You may only edit posts you have created.', 'danger')
+        return redirect(url_for('my_posts'))
+    form = PostForm()
+    if form.validate_on_submit():
+        new_title = form.title.data
+        new_content = form.content.data
+        print(new_title, new_content)
+        post.title = new_title
+        post.content = new_content
+        db.session.commit()
+
+        flash(f'{post.title} has been saved', 'success')
+        return redirect(url_for('post_detail', post_id=post.id))
+
+    return render_template('post_update.html', post=post, form=form)
+
+
+@app.route('/posts/<int:post_id>/delete', methods=['POST'])
+@login_required
+def post_delete(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.author != current_user:
+        flash('You can only delete your own posts', 'danger')
+        return redirect(url_for('my_posts'))
+
+    db.session.delete(post)
+    db.session.commit()
+
+    flash(f'{post.title} has been deleted', 'success')
+    return redirect(url_for('my_posts'))
