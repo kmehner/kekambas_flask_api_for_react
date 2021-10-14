@@ -148,3 +148,18 @@ def post_update(post_id):
         return redirect(url_for('post_detail', post_id=post.id))
 
     return render_template('post_update.html', post=post, form=form)
+
+
+@app.route('/posts/<int:post_id>/delete', methods=['POST'])
+@login_required
+def post_delete(post_id):
+    post = Post.query.get_or_404(post_id)
+    if post.author != current_user:
+        flash('You can only delete your own posts', 'danger')
+        return redirect(url_for('my_posts'))
+
+    db.session.delete(post)
+    db.session.commit()
+
+    flash(f'{post.title} has been deleted', 'success')
+    return redirect(url_for('my_posts'))
