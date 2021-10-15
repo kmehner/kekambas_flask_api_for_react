@@ -23,7 +23,7 @@ def register():
             # Flash a warning message
             flash(f'The username {username} is already registered. Please try again.', 'danger')
             # Redirect back to the register page
-            return redirect(url_for('register'))
+            return redirect(url_for('auth.register'))
 
         # Create a new user instance
         new_user = User(username, email, password)
@@ -61,7 +61,7 @@ def login():
         # Check if the user is None or if password is incorrect
         if user is None or not user.check_password(password):
             flash('Your username or password is incorrect', 'danger')
-            return redirect(url_for('login'))
+            return redirect(url_for('auth.login'))
         
         login_user(user)
 

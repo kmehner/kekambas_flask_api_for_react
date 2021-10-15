@@ -22,6 +22,9 @@ mail = Mail(app)
 from app.blueprints.auth import bp as auth
 app.register_blueprint(auth)
 
-from app import routes, models
+from app.blueprints.blog import bp as blog
+app.register_blueprint(blog)
+
+from app import routes
 
 

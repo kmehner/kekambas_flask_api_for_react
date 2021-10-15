@@ -1,6 +1,6 @@
 from app import app, db
-from app.models import Post
 from app.blueprints.auth.models import User
+from app.blueprints.blog.models import Post
 
 if __name__ == '__main__':
     app.run()
