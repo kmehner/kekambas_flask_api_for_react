@@ -1,6 +1,5 @@
 from app import db, login_manager
 from werkzeug.security import generate_password_hash, check_password_hash
-from datetime import datetime
 from flask_login import UserMixin
 
 
@@ -23,23 +22,3 @@ class User(db.Model, UserMixin):
 
     def check_password(self, password):
         return check_password_hash(self.password, password)
-
-    # def get_id(self):
-    #     return chr(self.id)
-
-    # @property
-    # def info(self):
-    #     return f'{self.username}  {self.email}'
-
-
-class Post(db.Model):
-    id = db.Column(db.Integer, primary_key=True)
-    title= db.Column(db.String(200))
-    content = db.Column(db.String(300))
-    date_created = db.Column(db.DateTime, nullable=False, default=datetime.utcnow )
-    user_id = db.Column(db.Integer, db.ForeignKey('user.id'), nullable=False)
-
-    def __init__(self, title, content, user_id):
-        self.title = title
-        self.content = content
-        self.user_id = user_id
