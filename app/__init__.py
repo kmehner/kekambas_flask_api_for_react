@@ -19,6 +19,9 @@ login_manager.login_message_category = 'danger'
 
 mail = Mail(app)
 
+from app.blueprints.auth import bp as auth
+app.register_blueprint(auth)
+
 from app import routes, models
 
 
