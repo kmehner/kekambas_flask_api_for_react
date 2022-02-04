@@ -1,76 +1,60 @@
 from . import bp as blog
-from app import db
-from flask import render_template, redirect, url_for, flash
-from flask_login import current_user, login_required
-from .forms import PostForm
+from app.blueprints.auth.http_auth import token_auth
+from flask import jsonify, request
 from .models import Post
 
 
-@blog.route('/createpost', methods=['GET', 'POST'])
-@login_required
-def createpost():
-    form = PostForm()
-    if form.validate_on_submit():
-        print('Hello')
-        title = form.title.data
-        content = form.content.data
-        new_post = Post(title, content, current_user.id)
-        db.session.add(new_post)
-        db.session.commit()
-
-        flash(f'The post {title} has been created.', 'primary')
-        return redirect(url_for('index'))
-        
-    return render_template('createpost.html', form=form)
-
+# Create a blog post
+@blog.route('/posts', methods=['POST'])
+@token_auth.login_required
+def create_post():
+    if not request.is_json:
+        return jsonify({'error': 'Please send a body'}), 400
+    data = request.json
+    # Validate the data
+    for field in ['title', 'content']:
+        if field not in data:
+            return jsonify({'error': f"You are missing the {field} field"}), 400
+    current_user = token_auth.current_user()
+    data['user_id'] = current_user.id
+    new_post = Post(**data)
+    return jsonify(new_post.to_dict()), 201
 
 
+# Get all posts
+@blog.route('/posts')
+def get_posts():
+    posts = Post.query.all()
+    return jsonify([p.to_dict() for p in posts])
 
-@blog.route('/my-posts')
-@login_required
-def my_posts():
-    posts = current_user.posts
-    return render_template('my_posts.html', posts=posts)
 
-
+# Get a single post with id
 @blog.route('/posts/<int:post_id>')
-def post_detail(post_id):
+def get_post(post_id):
     post = Post.query.get_or_404(post_id)
-    return render_template('post_detail.html', post=post)
+    return jsonify(post.to_dict())
 
 
-@blog.route('/posts/<int:post_id>/update', methods=['GET', 'POST'])
-@login_required
-def post_update(post_id):
+# Update a single post with id
+@blog.route('/posts/<int:post_id>', methods=['PUT'])
+@token_auth.login_required
+def update_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.author.id != current_user.id:
-        flash('That is not your post. You may only edit posts you have created.', 'danger')
-        return redirect(url_for('blog.my_posts'))
-    form = PostForm()
-    if form.validate_on_submit():
-        new_title = form.title.data
-        new_content = form.content.data
-        print(new_title, new_content)
-        post.title = new_title
-        post.content = new_content
-        db.session.commit()
-
-        flash(f'{post.title} has been saved', 'success')
-        return redirect(url_for('blog.post_detail', post_id=post.id))
-
-    return render_template('post_update.html', post=post, form=form)
+    user = token_auth.current_user()
+    if user.id != post.user_id:
+        return jsonify({'error': 'You are not allowed to edit this post'}), 403
+    data = request.json
+    post.update(data)
+    return jsonify(post.to_dict())
 
 
-@blog.route('/posts/<int:post_id>/delete', methods=['POST'])
-@login_required
-def post_delete(post_id):
+# Delete a single post with id
+@blog.route('/posts/<int:post_id>', methods=['DELETE'])
+@token_auth.login_required
+def delete_post(post_id):
     post = Post.query.get_or_404(post_id)
-    if post.author != current_user:
-        flash('You can only delete your own posts', 'danger')
-        return redirect(url_for('blog.my_posts'))
-
-    db.session.delete(post)
-    db.session.commit()
-
-    flash(f'{post.title} has been deleted', 'success')
-    return redirect(url_for('blog.my_posts'))
+    user = token_auth.current_user()
+    if user.id != post.user_id:
+        return jsonify({'error': 'You are not allowed to edit this post'}), 403
+    post.delete()
+    return jsonify({}), 204
