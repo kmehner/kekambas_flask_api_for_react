@@ -57,4 +57,4 @@ def delete_post(post_id):
     if user.id != post.user_id:
         return jsonify({'error': 'You are not allowed to edit this post'}), 403
     post.delete()
-    return jsonify({}), 204
+    return jsonify({'success': f'{post.title} has been deleted'})
