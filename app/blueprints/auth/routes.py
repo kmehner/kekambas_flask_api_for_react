@@ -1,85 +1,81 @@
 from . import bp as auth
-from app import db, mail
-from flask import render_template, flash, redirect, url_for
-from flask_login import login_user, logout_user, login_required
-from flask_mail import Message
-from .forms import UserInfoForm, LoginForm
+from flask import jsonify, request
 from .models import User
+from .http_auth import basic_auth, token_auth
+
+@auth.route('/token', methods=['POST'])
+@basic_auth.login_required
+def get_token():
+    user = basic_auth.current_user()
+    token = user.get_token()
+    return jsonify({'token': token})
+
+# Get all users
+@auth.route('/users')
+def get_users():
+    users = User.query.all()
+    return jsonify([u.to_dict() for u in users])
 
 
-@auth.route('/register', methods=["GET", 'POST'])
-def register():
-    register_form = UserInfoForm()
-    if register_form.validate_on_submit():
-        # Grab Data from form
-        username = register_form.username.data
-        email = register_form.email.data
-        password = register_form.password.data
-
-        # Check if the username from the form already exists in the User table
-        existing_user = User.query.filter_by(username=username).all()
-        # If there is a user with that username message them asking them to try again
-        if existing_user:
-            # Flash a warning message
-            flash(f'The username {username} is already registered. Please try again.', 'danger')
-            # Redirect back to the register page
-            return redirect(url_for('auth.register'))
-
-        # Create a new user instance
-        new_user = User(username, email, password)
-        # Add that user to the database
-        db.session.add(new_user)
-        db.session.commit()
-        # Flash a success message thanking them for signing up
-        flash(f'Thank you {username}, you have succesfully registered!', 'success')
-
-        # Create Welcome Email to new user
-        welcome_message = Message('Welcome to the Kekambas Blog!', [email])
-        welcome_message.body = f'Dear {username}, Thank you for signing up for our blog. We are so excited to have you.'
-
-        # Send Welcome Email
-        mail.send(welcome_message)
-
-        # Redirecting to the home page
-        return redirect(url_for('index'))
-        
-    return render_template('register.html', form=register_form)
+# Get a single user by id
+@auth.route('/users/<id>')
+def get_user(id):
+    user = User.query.get_or_404(id)
+    return jsonify(user.to_dict())
 
 
+# Create a user
+@auth.route('/users', methods=['POST'])
+def create_user():
+    data = request.json
+    # Validate the data
+    for field in ['username', 'email', 'password']:
+        if field not in data:
+            return jsonify({'error': f"You are missing the {field} field"}), 400
 
-@auth.route('/login', methods=['GET', 'POST'])
-def login():
-    form = LoginForm()
-    if form.validate_on_submit():
-        # Grab data from form
-        username = form.username.data
-        password = form.password.data
+    # Grab the data from the request body
+    username = data['username']
+    email = data['email']
 
-        # Query our User table for a user with username
-        user = User.query.filter_by(username=username).first()
+    # Check if the username or email already exists
+    user_exists = User.query.filter((User.username == username)|(User.email == email)).all()
+    # if it is, return back to register
+    if user_exists:
+        return jsonify({'error': f"User with username {username} or email {email} already exists"}), 400
 
-        # Check if the user is None or if password is incorrect
-        if user is None or not user.check_password(password):
-            flash('Your username or password is incorrect', 'danger')
-            return redirect(url_for('auth.login'))
-        
-        login_user(user)
+    # Create the new user
+    # new_user = User(username=username, email=email, password=password)
+    new_user = User(**data)
 
-        flash(f'Welcome {user.username}. You have succesfully logged in.', 'success')
+    return jsonify(new_user.to_dict())
 
-        return redirect(url_for('index'))
-        
+# Update a user by id
+@auth.route('/users/<int:id>', methods=['PUT'])
+@token_auth.login_required
+def updated_user(id):
+    current_user = token_auth.current_user()
+    if current_user.id != id:
+        return jsonify({'error': 'You do not have access to update this user'}), 403
+    user = User.query.get_or_404(id)
+    data = request.json
+    user.update(data)
+    return jsonify(user.to_dict())
 
-    return render_template('login.html', login_form=form)
+# Delete a user by id
+@auth.route('/users/<int:id>', methods=['DELETE'])
+@token_auth.login_required
+def delete_user(id):
+    current_user = token_auth.current_user()
+    if current_user.id != id:
+        return jsonify({'error': 'You do not have access to delete this user'}), 403
+    user_to_delete = User.query.get_or_404(id)
+    user_to_delete.delete()
+    return jsonify(), 204
 
 
-@auth.route('/logout')
-def logout():
-    logout_user()
-    return redirect(url_for('index'))
 
 
-@auth.route('/my-account')
-@login_required
-def my_account():
-    return render_template('my_account.html')
+@auth.route('/me')
+@token_auth.login_required
+def me():
+    return token_auth.current_user().to_dict()
